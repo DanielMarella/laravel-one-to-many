@@ -16,4 +16,8 @@ class Project extends Model
         'image',
         'slug'
     ];
+
+    public function type(){
+        return $this->belongsTo(Type::class);
+    }
 }
