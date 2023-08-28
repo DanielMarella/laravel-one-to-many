@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Admin\Project;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -16,6 +17,7 @@ class ProjectController extends Controller
      */
     public function index()
     {
+
         $projects = Project::paginate(15);
         return view('admin.projects.index', compact ('projects'));
     }
@@ -25,6 +27,7 @@ class ProjectController extends Controller
      */
     public function create()
     {
+
         return view('admin.projects.create');
     }
 
@@ -33,19 +36,25 @@ class ProjectController extends Controller
      */
     public function store(Request $request)
     {
-
         $data = $request->validate([
             'title' => ['required', 'unique:projects','min:3', 'max:255'],
             'image' => ['required', 'image'],
             'content' => ['required','min:10'],
         ]);
         
-        $img_path = Storage::put('uploads', $request['image']);
-        $data['image'] = $img_path;
+        if ($request->hasFile('image')) {
+            
+            $img_path = Storage::put('uploads', $request['image']);
+            $data['image'] = $img_path;
+        }
+
         $data['slug'] = Str::of($data['title'])->slug('-');
+
         $newProject = Project::create($data);
+        $newProject->slug = Str::of("$newProject->id " . $data['title'])->slug('-');
+        $newProject->save();
         
-        return redirect()->route('admin.projects.index');
+        return redirect()->route('admin.projects.index', $newProject);
     }
 
     /**
@@ -76,6 +85,13 @@ class ProjectController extends Controller
             'content' => ['required','min:10'],
 
         ]);
+
+        if ($request->hasFile('image')) {
+            Storage::delete($project->image);
+            $img_path = Storage::put('uploads', $request['image']);
+            $data['image'] = $img_path;
+        }
+        
         $data['slug'] = Str::of($data['title'])->slug('-');
         $project->update($data);
         return redirect()->route('admin.projects.show',compact('project'));
